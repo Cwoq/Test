@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Calendar - FEI Low Entry Search{% endblock %}
+
+{% block content %}
+<h1>Calendar Heatmap</h1>
+<p class="subtitle">Weekly view of show entry density. Green = fewer entries (opportunity). Red = more entries (crowded).</p>
+
+<form class="filters" method="GET" action="{{ url_for('main.calendar') }}">
+    <div class="filter-row">
+        <div class="filter-group">
+            <label for="year">Year</label>
+            <select name="year" id="year">
+                <option value="">All Years (Average)</option>
+                {% for y in range(2020, 2027) %}
+                <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>
+                <input type="checkbox" name="ranking_only" value="true"
+                       {% if ranking_only %}checked{% endif %}>
+                Ranking classes only
+            </label>
+        </div>
+        <button type="submit" class="btn-search">Update</button>
+    </div>
+</form>
+
+<div class="calendar-grid">
+    {% for week in range(1, 53) %}
+    {% set week_data = heatmap.get(week, []) %}
+    {% set total_avg = 0 %}
+    {% set show_count = week_data|length %}
+    <div class="calendar-cell {% if show_count == 0 %}empty{% elif week_data|map(attribute='avg_entries')|list|sum / show_count <= 15 %}level-low{% elif week_data|map(attribute='avg_entries')|list|sum / show_count <= 30 %}level-med{% else %}level-high{% endif %}"
+         data-week="{{ week }}"
+         title="Week {{ week }}{% if week_data %}: {{ show_count }} show(s){% endif %}">
+        <div class="week-label">W{{ week }}</div>
+        {% if week_data %}
+        <div class="show-count">{{ show_count }}</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+{% if heatmap %}
+<div class="calendar-legend">
+    <span class="legend-item"><span class="legend-color empty"></span> No data</span>
+    <span class="legend-item"><span class="legend-color level-low"></span> Low entries (&le;15)</span>
+    <span class="legend-item"><span class="legend-color level-med"></span> Medium (16-30)</span>
+    <span class="legend-item"><span class="legend-color level-high"></span> High (&gt;30)</span>
+</div>
+{% endif %}
+
+<div id="week-detail"></div>
+
+<script>
+document.querySelectorAll('.calendar-cell').forEach(cell => {
+    cell.addEventListener('click', () => {
+        const week = cell.dataset.week;
+        const detail = document.getElementById('week-detail');
+        const tooltip = cell.getAttribute('title');
+        detail.innerHTML = `<h3>Week ${week} Details</h3><p>${tooltip}</p>`;
+        detail.scrollIntoView({behavior: 'smooth'});
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - FEI Low Entry Search{% endblock %}
+
+{% block content %}
+<h1>Find Low-Entry FEI Shows</h1>
+<p class="subtitle">Shows sorted by lowest average entries in ranking classes. Lower entries = better odds for ranking points.</p>
+
+<form class="filters" method="GET" action="{{ url_for('main.dashboard') }}">
+    <div class="filter-row">
+        <div class="filter-group">
+            <label for="star_level">Star Level</label>
+            <select name="star_level" id="star_level">
+                <option value="">All Levels</option>
+                {% for level in range(1, 6) %}
+                <option value="{{ level }}" {% if star_level == level %}selected{% endif %}>CSI {{ level }}*</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="country">Country</label>
+            <select name="country" id="country">
+                <option value="">All</option>
+                <option value="USA" {% if country == 'USA' %}selected{% endif %}>USA</option>
+                <option value="CAN" {% if country == 'CAN' %}selected{% endif %}>Canada</option>
+                <option value="MEX" {% if country == 'MEX' %}selected{% endif %}>Mexico</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="state">State</label>
+            <select name="state" id="state">
+                <option value="">All States</option>
+                {% for s in states %}
+                <option value="{{ s }}" {% if state == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="week_start">Week Range</label>
+            <div class="week-range">
+                <input type="number" name="week_start" id="week_start" min="1" max="53"
+                       placeholder="From" value="{{ week_start or '' }}">
+                <span>to</span>
+                <input type="number" name="week_end" id="week_end" min="1" max="53"
+                       placeholder="To" value="{{ week_end or '' }}">
+            </div>
+        </div>
+
+        <div class="filter-group">
+            <label>
+                <input type="checkbox" name="ranking_only" value="true"
+                       {% if ranking_only %}checked{% endif %}>
+                Ranking classes only
+            </label>
+        </div>
+
+        <button type="submit" class="btn-search">Search</button>
+    </div>
+</form>
+
+{% if shows %}
+<div class="results-count">{{ shows|length }} shows found</div>
+
+<table class="results-table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Venue</th>
+            <th>Location</th>
+            <th>Star Level</th>
+            <th>Week</th>
+            <th>Avg Entries</th>
+            <th>Range</th>
+            <th>Trend</th>
+            <th>Last Year</th>
+            <th>Years of Data</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for show in shows %}
+        <tr class="{% if show.avg_entries <= 15 %}low-entry{% elif show.avg_entries <= 30 %}med-entry{% else %}high-entry{% endif %}">
+            <td>{{ loop.index }}</td>
+            <td><a href="{{ url_for('main.show_detail', venue_id=show.venue_id) }}">{{ show.venue_name }}</a></td>
+            <td>{{ show.state or '' }}, {{ show.country }}</td>
+            <td>{% if show.star_level %}CSI {{ show.star_level }}*{% else %}-{% endif %}</td>
+            <td>Week {{ show.week_number }}</td>
+            <td class="entry-count">{{ show.avg_entries }}</td>
+            <td>{{ show.min_entries }} - {{ show.max_entries }}</td>
+            <td class="trend {% if show.trend < 0 %}trend-down{% elif show.trend > 0 %}trend-up{% endif %}">
+                {% if show.trend < 0 %}&#9660; {{ show.trend }}{% elif show.trend > 0 %}&#9650; +{{ show.trend }}{% else %}-{% endif %}
+            </td>
+            <td>{{ show.last_year_entries or '-' }}</td>
+            <td>{{ show.years_of_data }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="no-results">
+    <p>No shows found. Try adjusting your filters or run the scrapers to collect data first.</p>
+    <code>python scripts/scrape_fei.py --start 2023-01-01 --end 2025-12-31</code>
+</div>
+{% endif %}
+{% endblock %}

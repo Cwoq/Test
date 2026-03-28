@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}{{ venue_name }} - FEI Low Entry Search{% endblock %}
+
+{% block content %}
+<h1>{{ venue_name }}</h1>
+<a href="{{ url_for('main.dashboard') }}" class="back-link">&larr; Back to Dashboard</a>
+
+{% if yearly_summary %}
+<h2>Year-over-Year Summary (Ranking Classes)</h2>
+<table class="results-table">
+    <thead>
+        <tr>
+            <th>Year</th>
+            <th>Total Classes</th>
+            <th>Ranking Classes</th>
+            <th>Avg Entries</th>
+            <th>Min</th>
+            <th>Max</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in yearly_summary %}
+        <tr>
+            <td>{{ row.year }}</td>
+            <td>{{ row.total_classes }}</td>
+            <td>{{ row.ranking_classes }}</td>
+            <td class="entry-count">{{ row.avg_entries or '-' }}</td>
+            <td>{{ row.min_entries or '-' }}</td>
+            <td>{{ row.max_entries or '-' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="trend-chart" id="trend-chart">
+    <h2>Entry Trend</h2>
+    <div class="chart-bars">
+        {% set max_entry = yearly_summary|map(attribute='avg_entries')|select('number')|list|max or 1 %}
+        {% for row in yearly_summary %}
+        {% if row.avg_entries %}
+        <div class="bar-group">
+            <div class="bar" style="height: {{ (row.avg_entries / max_entry * 200)|int }}px">
+                {{ row.avg_entries }}
+            </div>
+            <div class="bar-label">{{ row.year }}</div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div class="no-results">
+    <p>No historical data available for this venue.</p>
+</div>
+{% endif %}
+
+{% if classes %}
+<h2>All Classes Detail</h2>
+<table class="results-table detail-table">
+    <thead>
+        <tr>
+            <th>Year</th>
+            <th>Week</th>
+            <th>Class Name</th>
+            <th>Entries</th>
+            <th>Starters</th>
+            <th>Ranking</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for cls in classes %}
+        <tr class="{% if cls.is_ranking_class %}ranking-class{% endif %}">
+            <td>{{ cls.year }}</td>
+            <td>{{ cls.week_number }}</td>
+            <td>{{ cls.class_name }}</td>
+            <td class="entry-count">{{ cls.entry_count or '-' }}</td>
+            <td>{{ cls.starter_count or '-' }}</td>
+            <td>{% if cls.is_ranking_class %}Yes{% else %}-{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}
