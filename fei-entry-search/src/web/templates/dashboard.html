@@ -3,8 +3,8 @@
 {% block title %}Dashboard - FEI Low Entry Search{% endblock %}
 
 {% block content %}
-<h1>Find Low-Entry FEI Shows</h1>
-<p class="subtitle">Shows sorted by lowest average entries in ranking classes. Lower entries = better odds for ranking points.</p>
+<h1>All FEI Shows — Fewest Entries First</h1>
+<p class="subtitle">Every show sorted from fewest to most entries in ranking classes across 5 years of history. Green trend = entries decreasing (opportunity improving). Red trend = entries increasing.</p>
 
 <form class="filters" method="GET" action="{{ url_for('main.dashboard') }}">
     <div class="filter-row">
@@ -57,25 +57,25 @@
             </label>
         </div>
 
-        <button type="submit" class="btn-search">Search</button>
+        <button type="submit" class="btn-search">Filter</button>
     </div>
 </form>
 
 {% if shows %}
-<div class="results-count">{{ shows|length }} shows found</div>
+<div class="results-count">{{ shows|length }} shows — sorted fewest entries to most</div>
 
 <table class="results-table">
     <thead>
         <tr>
             <th>#</th>
-            <th>Venue</th>
+            <th>Show / Venue</th>
             <th>Location</th>
             <th>Star Level</th>
             <th>Week</th>
             <th>Avg Entries</th>
-            <th>Range</th>
-            <th>Trend</th>
-            <th>Last Year</th>
+            <th>Range (Min-Max)</th>
+            <th>5-Year Trend</th>
+            <th>Per Year</th>
             <th>Years of Data</th>
         </tr>
     </thead>
@@ -84,15 +84,22 @@
         <tr class="{% if show.avg_entries <= 15 %}low-entry{% elif show.avg_entries <= 30 %}med-entry{% else %}high-entry{% endif %}">
             <td>{{ loop.index }}</td>
             <td><a href="{{ url_for('main.show_detail', venue_id=show.venue_id) }}">{{ show.venue_name }}</a></td>
-            <td>{{ show.state or '' }}, {{ show.country }}</td>
+            <td>{{ show.state or '' }}{% if show.state %}, {% endif %}{{ show.country }}</td>
             <td>{% if show.star_level %}CSI {{ show.star_level }}*{% else %}-{% endif %}</td>
             <td>Week {{ show.week_number }}</td>
             <td class="entry-count">{{ show.avg_entries }}</td>
-            <td>{{ show.min_entries }} - {{ show.max_entries }}</td>
-            <td class="trend {% if show.trend < 0 %}trend-down{% elif show.trend > 0 %}trend-up{% endif %}">
-                {% if show.trend < 0 %}&#9660; {{ show.trend }}{% elif show.trend > 0 %}&#9650; +{{ show.trend }}{% else %}-{% endif %}
+            <td>{{ show.min_entries }} – {{ show.max_entries }}</td>
+            <td class="trend-cell {% if show.trend_label == 'Decreasing' %}trend-down{% elif show.trend_label == 'Increasing' %}trend-up{% else %}trend-stable{% endif %}">
+                <span class="trend-label">{{ show.trend_label }}</span>
+                <span class="trend-value">
+                    {% if show.trend < 0 %}{{ show.trend }}/yr{% elif show.trend > 0 %}+{{ show.trend }}/yr{% else %}0/yr{% endif %}
+                </span>
             </td>
-            <td>{{ show.last_year_entries or '-' }}</td>
+            <td class="year-breakdown">
+                {% for year, count in show.entries_by_year|dictsort %}
+                <span class="year-chip" title="{{ year }}: {{ count }} avg entries">{{ year|string|truncate(4, true, '') }}: {{ count }}</span>
+                {% endfor %}
+            </td>
             <td>{{ show.years_of_data }}</td>
         </tr>
         {% endfor %}
@@ -100,8 +107,9 @@
 </table>
 {% else %}
 <div class="no-results">
-    <p>No shows found. Try adjusting your filters or run the scrapers to collect data first.</p>
-    <code>python scripts/scrape_fei.py --start 2023-01-01 --end 2025-12-31</code>
+    <p>No shows found. Run the scraper to collect 5 years of historical data first:</p>
+    <code>python scripts/scrape_fei.py</code>
+    <p style="margin-top: 0.5rem; font-size: 0.85rem;">This will scrape FEI jumping shows from the past 5 years for USA, CAN, and MEX.</p>
 </div>
 {% endif %}
 {% endblock %}

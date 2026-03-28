@@ -33,7 +33,6 @@ def dashboard():
         country=country,
         state=state,
         ranking_only=ranking_only,
-        limit=100,
     )
 
     return render_template(

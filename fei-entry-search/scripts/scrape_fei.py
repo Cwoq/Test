@@ -22,8 +22,8 @@ def parse_args():
     parser.add_argument(
         "--start",
         type=date.fromisoformat,
-        default=date.today() - timedelta(days=365 * 3),
-        help="Start date (YYYY-MM-DD). Default: 3 years ago.",
+        default=date.today() - timedelta(days=365 * 5),
+        help="Start date (YYYY-MM-DD). Default: 5 years ago.",
     )
     parser.add_argument(
         "--end",

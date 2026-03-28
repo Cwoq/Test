@@ -9,10 +9,11 @@ Find FEI jumping shows in North America with historically low entry numbers in r
 pip install -r requirements.txt
 playwright install chromium
 
-# Scrape historical data (FEI calendar - primary source)
-python scripts/scrape_fei.py --start 2023-01-01 --end 2025-12-31
+# Scrape historical data (FEI calendar - primary & most reliable source)
+# Defaults to past 5 years of North American jumping shows
+python scripts/scrape_fei.py
 
-# Scrape ShowGrounds Live data (supplementary)
+# Optional: ShowGrounds Live data (supplementary, if FEI is insufficient)
 python scripts/scrape_showgrounds.py
 
 # Launch the dashboard
@@ -22,7 +23,7 @@ python -m src.web.app
 
 ## Features
 
-- **Dashboard**: Filter and sort shows by star level, state, week range. Sorted by lowest avg entries in ranking classes.
+- **Dashboard**: Single sorted list of ALL shows from fewest to most entries. Filter by star level, state, week range. Per-year entry breakdown and 5-year trend (Increasing/Decreasing/Stable) shown for every show.
 - **Calendar Heatmap**: 52-week grid color-coded by entry density. Green = low entries (opportunity), Red = crowded.
 - **Show Detail**: Year-over-year history for a specific venue with trend charts.
 - **Sortable Columns**: Click any table header to sort.

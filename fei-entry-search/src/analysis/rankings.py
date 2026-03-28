@@ -20,7 +20,9 @@ class ShowOpportunity:
     max_entries: int
     years_of_data: int
     trend: float  # negative = fewer entries over time (good), positive = growing
+    trend_label: str  # "Decreasing", "Increasing", "Stable"
     last_year_entries: float | None
+    entries_by_year: dict  # {year: avg_entry_count} for per-year breakdown
 
 
 def get_avg_entries_by_venue_week(
@@ -71,7 +73,9 @@ def get_avg_entries_by_venue_week(
 
         opportunities = []
         for row in results:
-            trend = _calculate_trend(session, row.venue_id, row.week_number, ranking_only)
+            slope, trend_label, entries_by_year = _calculate_trend(
+                session, row.venue_id, row.week_number, ranking_only
+            )
             last_year = _get_last_year_avg(session, row.venue_id, row.week_number, ranking_only)
 
             opportunities.append(ShowOpportunity(
@@ -85,8 +89,10 @@ def get_avg_entries_by_venue_week(
                 min_entries=row.min_entries,
                 max_entries=row.max_entries,
                 years_of_data=row.years_of_data,
-                trend=trend,
+                trend=slope,
+                trend_label=trend_label,
                 last_year_entries=last_year,
+                entries_by_year=entries_by_year,
             ))
 
         return opportunities
@@ -96,8 +102,14 @@ def get_avg_entries_by_venue_week(
 
 def _calculate_trend(
     session, venue_id: int, week_number: int, ranking_only: bool
-) -> float:
-    """Calculate year-over-year trend. Negative = decreasing entries (opportunity)."""
+) -> tuple[float, str, dict]:
+    """Calculate year-over-year trend.
+
+    Returns (slope, label, entries_by_year) where:
+    - slope: entries-per-year change (negative = shrinking field = opportunity)
+    - label: "Decreasing", "Increasing", or "Stable"
+    - entries_by_year: {year: avg_entries} dict
+    """
     query = (
         session.query(
             Show.year,
@@ -117,18 +129,28 @@ def _calculate_trend(
     query = query.group_by(Show.year).order_by(Show.year)
     rows = query.all()
 
-    if len(rows) < 2:
-        return 0.0
+    entries_by_year = {row.year: round(row.avg_entries, 1) for row in rows}
 
-    # Simple linear trend: (last - first) / num_years
+    if len(rows) < 2:
+        return 0.0, "Stable", entries_by_year
+
     first_avg = rows[0].avg_entries
     last_avg = rows[-1].avg_entries
     num_years = rows[-1].year - rows[0].year
 
     if num_years == 0 or first_avg == 0:
-        return 0.0
+        return 0.0, "Stable", entries_by_year
 
-    return round((last_avg - first_avg) / num_years, 1)
+    slope = round((last_avg - first_avg) / num_years, 1)
+
+    if slope <= -1.0:
+        label = "Decreasing"
+    elif slope >= 1.0:
+        label = "Increasing"
+    else:
+        label = "Stable"
+
+    return slope, label, entries_by_year
 
 
 def _get_last_year_avg(
@@ -251,10 +273,13 @@ def rank_shows_by_opportunity(
     country: str | None = None,
     state: str | None = None,
     ranking_only: bool = True,
-    limit: int = 50,
+    limit: int | None = None,
     db_path: str | None = None,
 ) -> list[ShowOpportunity]:
-    """Main ranking function: find shows with lowest competition."""
+    """Main ranking function: find shows with lowest competition.
+
+    Returns ALL shows sorted by fewest entries unless limit is set.
+    """
     results = get_avg_entries_by_venue_week(
         star_level=star_level,
         country=country,
@@ -268,4 +293,6 @@ def rank_shows_by_opportunity(
     if week_end is not None:
         results = [r for r in results if r.week_number <= week_end]
 
-    return results[:limit]
+    if limit is not None:
+        return results[:limit]
+    return results
