@@ -6,7 +6,15 @@ from src.analysis.rankings import (
     rank_shows_by_opportunity,
 )
 
-bp = Blueprint("main", __name__)
+import os
+
+bp = Blueprint(
+    "main",
+    __name__,
+    template_folder=os.path.join(os.path.dirname(__file__), "templates"),
+    static_folder=os.path.join(os.path.dirname(__file__), "static"),
+    static_url_path="/static",
+)
 
 US_STATES = [
     "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
